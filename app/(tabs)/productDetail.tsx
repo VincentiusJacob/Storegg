@@ -31,7 +31,8 @@ const ProductDetail = () => {
   const route = useRoute<ProductDetailRouteProp>();
   const { productID } = route.params;
   const [isBought, setIsBought] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [imageUri, setImageUri] = useState("");
   const themeMode = useSelector((state: RootState) => state.theme.mode);
@@ -114,7 +115,11 @@ const ProductDetail = () => {
 
   const showAlert = (message: string) => {
     setModalMessage(message);
-    setModalVisible(true);
+    setAlertModalVisible(true);
+  };
+
+  const closeAlertModal = () => {
+    setAlertModalVisible(false);
   };
 
   const handleBuyProduct = async () => {
@@ -183,11 +188,11 @@ const ProductDetail = () => {
 
   const openImageModal = (uri: string) => {
     setImageUri(uri);
-    setModalVisible(true);
+    setImageModalVisible(true);
   };
 
   const closeImageModal = () => {
-    setModalVisible(false);
+    setImageModalVisible(false);
   };
 
   useEffect(() => {
@@ -234,27 +239,46 @@ const ProductDetail = () => {
 
       <Modal
         transparent={true}
-        visible={modalVisible}
+        visible={imageModalVisible}
         animationType="fade"
         onRequestClose={closeImageModal}
       >
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={closeImageModal}
-        >
-          <TouchableWithoutFeedback onPress={closeImageModal}>
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Image
-                  source={{ uri: imageUri }}
-                  style={styles.fullScreenImage}
-                />
-              </View>
+        <TouchableWithoutFeedback onPress={closeImageModal}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.fullScreenImage}
+              />
             </View>
-          </TouchableWithoutFeedback>
-        </Modal>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <Modal
+        transparent={true}
+        visible={alertModalVisible}
+        animationType="fade"
+        onRequestClose={closeAlertModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {modalMessage ? (
+              <Text>{modalMessage}</Text>
+            ) : (
+              <Image
+                source={{ uri: product?.image }}
+                style={styles.fullScreenImage}
+              />
+            )}
+            <TouchableOpacity
+              onPress={closeAlertModal}
+              style={styles.modalButton}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       <View style={styles.detailsContainer}>
@@ -327,29 +351,6 @@ const ProductDetail = () => {
           <Text style={styles.actionBuy}>Buy</Text>
         </TouchableOpacity>
       )}
-
-      <Modal
-        transparent={true}
-        visible={modalVisible}
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Image
-              source={{ uri: product?.image }}
-              style={styles.fullScreenImage}
-            />
-
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={styles.modalButton}
-            >
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
@@ -453,6 +454,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   modalContent: {
+    flexDirection: "column",
+    gap: 20,
     backgroundColor: "white",
     padding: 20,
     borderRadius: 10,
