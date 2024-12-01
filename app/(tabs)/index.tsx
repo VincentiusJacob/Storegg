@@ -1,74 +1,185 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import {
+  Text,
+  View,
+  StyleSheet,
+  FlatList,
+  Modal,
+  Button,
+  BackHandler,
+  useColorScheme,
+} from "react-native";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
+import { setProducts } from "@/store/productSlice";
+import { RootState } from "@/store/index";
+import GridViewIcon from "@/components/GridViewIcon";
+import ListViewIcon from "@/components/ListViewIcon";
+import FloatingButton from "@/components/FloatingButton";
+import ProductItem from "@/components/ProductItem";
+import Navigation from "@/components/Navigation";
+import { useNavigation } from "@react-navigation/native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function Index() {
+  const colorScheme = useColorScheme();
+  const dispatch = useDispatch();
+  const filteredProducts = useSelector(
+    (state: RootState) => state.products.filteredProducts
+  );
+  const [isGridView, setIsGridView] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const navigation = useNavigation();
 
-export default function HomeScreen() {
+  const themeMode = useSelector((state: RootState) => state.theme.mode);
+
+  useEffect(() => {
+    const fetchApi = async () => {
+      try {
+        const response = await axios.get("https://fakestoreapi.com/products");
+        dispatch(setProducts(response.data));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchApi();
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      handleBackPress
+    );
+
+    return () => {
+      backHandler.remove();
+    };
+  }, [dispatch]);
+
+  const handleBackPress = () => {
+    setIsModalVisible(true);
+    return true;
+  };
+
+  const handleExitApp = () => {
+    setIsModalVisible(false);
+    BackHandler.exitApp();
+  };
+
+  const handleCancelExit = () => {
+    setIsModalVisible(false);
+  };
+
+  const toggleView = () => {
+    setIsGridView((prev) => !prev);
+  };
+
+  const containerBackgroundColor = themeMode === "dark" ? "#001524" : "white";
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={{ flex: 1, backgroundColor: containerBackgroundColor }}>
+      <Navigation />
+      <View style={styles.mainPage}>
+        <View style={styles.productView}>
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "bold",
+              color: containerBackgroundColor === "#001524" ? "white" : "black",
+            }}
+          >
+            Available Products
+          </Text>
+          {isGridView ? (
+            <GridViewIcon onPress={toggleView} />
+          ) : (
+            <ListViewIcon onPress={toggleView} />
+          )}
+        </View>
+
+        {filteredProducts && filteredProducts.length > 0 ? (
+          <FlatList
+            key={isGridView ? "grid" : "list"}
+            data={filteredProducts}
+            numColumns={isGridView ? 2 : 1}
+            renderItem={({ item }) => (
+              <ProductItem isGridView={isGridView} productID={item.id} />
+            )}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.itemsList}
+          />
+        ) : (
+          <Text>No products available</Text>
+        )}
+        <FloatingButton />
+      </View>
+
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelExit}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>
+              Are you sure you want to close Storegg?
+            </Text>
+            <View style={styles.modalButtons}>
+              <Button title="Cancel" onPress={handleCancelExit} />
+              <Button title="OK" onPress={handleExitApp} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  mainPage: {
+    flex: 1,
+    width: "100%",
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    marginTop: 10,
+    padding: 30,
+    justifyContent: "space-between",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+
+  itemsList: {
+    padding: 20,
+    gap: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+
+  productView: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+    alignItems: "center",
+  },
+
+  modalText: {
+    fontSize: 18,
+    marginBottom: 20,
+  },
+
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
   },
 });
